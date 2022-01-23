@@ -1,5 +1,5 @@
 import test from 'ava';
-import { RobotsTxt, RobotsTxtLine } from '../src/robotsParser';
+import { RobotsTxt, RobotsTxtLine } from '../src/index';
 import amazonRobots from './assets/amazonRobots.json';
 
 test('RobotsTxt#constructor()', (it) => {

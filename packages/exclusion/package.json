@@ -1,5 +1,5 @@
 {
-  "name": "@netscrape/robotstxt",
+  "name": "exclusion",
   "version": "0.1.0-alpha0",
   "description": "A simple, RFC-compliant robots.txt parser",
   "author": "Russell Steadman",
@@ -15,7 +15,7 @@
   "dependencies": {
     "@babel/runtime": "^7.16.7",
     "@types/micromatch": "^4.0.2",
-    "@types/node": "^16.11.20",
+    "@types/node": "^16.11.21",
     "micromatch": "^4.0.4"
   },
   "repository": {
@@ -31,7 +31,7 @@
   "bugs": {
     "url": "https://github.com/russellsteadman/netscrape/issues"
   },
-  "homepage": "https://github.com/russellsteadman/netscrape/tree/main/packages/robotstxt#readme",
+  "homepage": "https://github.com/russellsteadman/netscrape/tree/main/packages/exclusion#readme",
   "devDependencies": {
     "@babel/cli": "^7.16.8",
     "@babel/core": "^7.16.12",
