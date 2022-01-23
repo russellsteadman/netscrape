@@ -1,0 +1,9 @@
+# Dependencies
+node_modules
+
+# Testing
+test
+coverage
+
+# Source files
+src
