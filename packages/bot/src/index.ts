@@ -3,6 +3,7 @@ import type { Response } from 'got/dist/source/core/response';
 import QuickLRU from 'quick-lru';
 import CacheableLookup from 'cacheable-lookup';
 import * as APIError from './errors';
+import { RobotsTxt } from 'exclusion';
 
 type BotOptions = {
   name: string;
@@ -20,10 +21,10 @@ type BotRequestOptions = Partial<{
 }>;
 
 class Bot {
-  private allowedPaths = new Map() as Map<string, Map<string, boolean>>;
-  private robotsTxt = {} as Record<string, string>;
-  private userAgent!: string;
-  private botName!: string;
+  private robotsTxt = {} as Record<string, RobotsTxt>;
+  private robotsTxtString = {} as Record<string, string>;
+  readonly userAgent!: string;
+  readonly botName!: string;
   private requestDelay = {} as Record<string, number>;
   private requestTime = {} as Record<string, Date>;
   private cache!: QuickLRU<unknown, unknown>;
@@ -78,43 +79,6 @@ class Bot {
       '8.8.8.8',
       '[2001:4860:4860::8844]',
     ];
-  }
-
-  private parseRobots(origin: string) {
-    if (typeof this.robotsTxt[origin] !== 'string') return;
-
-    this.robotsTxt[origin] = this.robotsTxt[origin].replace(/\r/g, '');
-
-    const statements = this.robotsTxt[origin]
-      .split(/\n/)
-      .map((s) => s.trim())
-      .filter((s) => !!s)
-      .map((s) => s.split(':', 2).map((p) => p.trim()));
-
-    let listenToClaims = false;
-
-    const allowedPaths = new Map<string, boolean>();
-
-    for (const [key, value] of statements) {
-      const keyLowerCase = key.toLowerCase();
-      if (keyLowerCase === 'user-agent') {
-        if (value === '*' || /screener/i.test(value)) {
-          listenToClaims = true;
-        } else {
-          listenToClaims = false;
-        }
-      } else if (keyLowerCase === 'allow' && listenToClaims) {
-        allowedPaths.set(value, true);
-      } else if (keyLowerCase === 'disallow' && listenToClaims) {
-        allowedPaths.set(value, false);
-      } else if (keyLowerCase === 'crawl-delay' && listenToClaims) {
-        if (value && !Number.isNaN(Number(value))) {
-          this.requestDelay[origin] = Number(value) * 1000;
-        }
-      }
-    }
-
-    this.allowedPaths.set(origin, allowedPaths);
   }
 
   private fetchURL(
@@ -186,10 +150,10 @@ class Bot {
 
     try {
       const robotsTxt = await this.fetchURL(robotsTxtURL);
-      const isSame = this.robotsTxt[origin] === robotsTxt.body;
-      if (!isSame) {
-        this.robotsTxt[origin] = robotsTxt.body;
-        this.parseRobots(origin);
+
+      if (this.robotsTxtString[origin] !== robotsTxt.body) {
+        this.robotsTxtString[origin] = robotsTxt.body;
+        this.robotsTxt[origin] = new RobotsTxt(robotsTxt.body);
       }
     } catch (err) {
       console.error(err);
@@ -210,23 +174,12 @@ class Bot {
 
     await this.fetchRobotsTxt(url.origin);
 
-    const allowedPaths = this.allowedPaths.get(url.origin);
-    if (!allowedPaths) {
-      console.error('no allowed paths');
-      throw new APIError.BadGateway('No allowed paths');
-    }
+    const allowedByRobots = this.robotsTxt[origin].isPathAllowed(
+      `${url.pathname}${url.search}`,
+      this.botName,
+    );
 
-    let allowed = true;
-
-    for (const [b, c] of allowedPaths) {
-      const path = b[b.length - 1] === '*' ? b : `${b}*`;
-      if (true) {
-        allowed = c;
-      }
-    }
-
-    if (!allowed) {
-      console.error('request blocked');
+    if (!allowedByRobots) {
       throw new APIError.BadGateway('Request blocked by robots.txt');
     }
 

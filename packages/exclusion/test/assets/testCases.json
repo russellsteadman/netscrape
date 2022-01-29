@@ -1,0 +1,23 @@
+{
+  "LINE_EQUAL_TEST_CASES": [
+    ["/foo/bar?baz=quz", "/foo/bar?baz=quz"],
+    ["/foo/bar?baz=http://foo.bar", "/foo/bar?baz=http%3A%2F%2Ffoo.bar"],
+    ["/foo/bar/ツ", "/foo/bar/%E3%83%84"],
+    ["/foo/bar/%E3%83%84", "/foo/bar/%E3%83%84"],
+    ["/foo/bar/%62%61%7A", "/foo/bar/baz"]
+  ],
+  "LINE_MATCH_TEST_CASES": [
+    ["/foo/bar", "/foo/bar/baz"],
+    ["/foo/bar", "/foo/bar/"],
+    ["/foo/bar", "/foo/bar?"]
+  ],
+  "LINE_MISMATCH_TEST_CASES": [
+    ["/foo/bar", "/foo/ba"],
+    ["/foo/bar", "/foo/"],
+    ["/foo/bar", "/foo"],
+    ["/foo/bar", "/foo/baz/bar"],
+    ["/foo/*/bar", "/foo/bar"],
+    ["/foo/bar$", "/foo/bar/"],
+    ["/foo/bar$", "/foo/bar/baz"]
+  ]
+}

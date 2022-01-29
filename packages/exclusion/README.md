@@ -1,19 +1,11 @@
 # Exclusion
 
-A simple and compliant `robots.txt` parser.
+A simple and compliant `robots.txt` parser for Node.js.
 
-## Under Construction
-
-This project is still under active development, and has not been released for
-production yet.
+![](https://img.shields.io/librariesio/release/npm/exclusion?style=flat-square)
+![](https://img.shields.io/npm/l/exclusion?style=flat-square) ![](https://img.shields.io/snyk/vulnerabilities/npm/exclusion?style=flat-square)
 
 ## Get Started
-
-This is the `robots.txt` parser used by the
-[`netscrape`](https://www.npmjs.com/packages/netscrape) package. You may want to
-check out
-[NetScrape](https://github.com/russellsteadman/netscrape/tree/main/packages/bot#readme)
-for most simple bot use-cases.
 
 ```sh
 npm install --save exclusion
@@ -22,3 +14,33 @@ npm install --save exclusion
 ```sh
 yarn add exclusion
 ```
+
+This is the `robots.txt` parser used by the
+[`netscrape`](https://www.npmjs.com/packages/netscrape) package. You may want to
+check out
+[NetScrape](https://github.com/russellsteadman/netscrape/tree/main/packages/bot#readme)
+for most simple bot use-cases.
+
+## Usage
+
+```js
+const Exclusion = require('exclusion');
+
+// Fetch a robots.txt file...
+
+// Pass a robots.txt string to initialize the parser
+const robotsTxt = new Exclusion(myRobotsTxtString);
+
+// Check a path
+robotsTxt.isPathAllowed('/certain/path', 'MyUserAgent');
+// returns boolean
+
+// Check a delay
+robotsTxt.getDelay('MyUserAgent');
+// returns delay in milliseconds or undefined
+```
+
+## License
+
+MIT (C) 2022 [Russell Steadman](https://github.com/russellsteadman). See LICENSE file. Visit [Google
+deps.dev](https://deps.dev/npm/exclusion) for dependency license information.

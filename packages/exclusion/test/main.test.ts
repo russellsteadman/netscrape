@@ -1,73 +1,75 @@
 import test from 'ava';
-import { RobotsTxt, RobotsTxtLine } from '../src/index';
+import { RobotsTxt } from '../src/index';
 import amazonRobots from './assets/amazonRobots.json';
+import { LINE_EQUAL_TEST_CASES } from './assets/testCases.json';
+
+const robotsTxtSourceOne = `User-Agent: Hello
+${LINE_EQUAL_TEST_CASES.map(([line]) => `Disallow: ${line}`).join('\n')}
+Crawl-Delay: 23
+
+User-Agent: *
+${LINE_EQUAL_TEST_CASES.map(([line]) => `Allow: ${line}`).join('\n')}
+Disallow: /
+Crawl-Delay: 1
+
+User-Agent: Goodbye
+${LINE_EQUAL_TEST_CASES.map(([line]) => `Disallow: ${line}`).join('\n')}
+Disallow: /
+Crawl-Delay: 7`;
 
 test('RobotsTxt#constructor()', (it) => {
   const robotsTxt = new RobotsTxt(amazonRobots);
-  it.is(robotsTxt.lines.length, 151, 'Line count incorrect');
+  it.is(robotsTxt.lines.length, 154, 'Line count incorrect');
 });
 
-// Equivalent per RFC
-const LINE_EQUAL_TEST_CASES = new Map([
-  ['/foo/bar?baz=quz', '/foo/bar?baz=quz'],
-  ['/foo/bar?baz=http://foo.bar', '/foo/bar?baz=http%3A%2F%2Ffoo.bar'],
-  ['/foo/bar/ツ', '/foo/bar/%E3%83%84'],
-  ['/foo/bar/%E3%83%84', '/foo/bar/%E3%83%84'],
-  ['/foo/bar/%62%61%7A', '/foo/bar/baz'],
-]);
+test('RobotsTxt#getDelay()', (it) => {
+  const robotsTxt = new RobotsTxt(amazonRobots);
+  it.is(robotsTxt.getDelay('Not_an_agent'), 5000);
+  it.is(robotsTxt.getDelay('Test_1'), 10000);
+  it.is(robotsTxt.getDelay('EtaoSpider'), 10000);
 
-// Robots path -> fetch path, matching
-const LINE_MATCH_TEST_CASES = new Map([
-  ['/foo/bar', '/foo/bar/baz'],
-  ['/foo/bar', '/foo/bar/'],
-  ['/foo/bar', '/foo/bar?'],
-]);
+  const robotsTxtBlank = new RobotsTxt(
+    'Sitemap: https://example.com/sitemap.xml',
+  );
+  it.is(robotsTxtBlank.getDelay('Not_an_agent'), undefined);
 
-// Robots path -> fetch path, not matching
-const LINE_MISMATCH_TEST_CASES = new Map([
-  ['/foo/bar', '/foo/ba'],
-  ['/foo/bar', '/foo/'],
-  ['/foo/bar', '/foo'],
-  ['/foo/bar', '/foo/baz/bar'],
-  ['/foo/*/bar', '/foo/bar'],
-  ['/foo/bar$', '/foo/bar/'],
-  ['/foo/bar$', '/foo/bar/baz'],
-  ['/foo/bar', '/foo/bar/baz'],
-]);
-
-test('RobotsTxtLine#constructor()', (it) => {
-  for (const [line, result] of LINE_EQUAL_TEST_CASES) {
-    it.is(new RobotsTxtLine('allow', line).value, result);
-  }
+  const robotsTxtBadDelay = new RobotsTxt('User-Agent: *\nCrawl-Delay: a');
+  it.is(robotsTxtBadDelay.getDelay('Not_an_agent'), undefined);
 });
 
-test('RobotsTxtLine#isPathAllowedByLine()', (it) => {
+test('RobotsTxt#isPathAllowed()', (it) => {
+  const robotsTxt = new RobotsTxt(robotsTxtSourceOne);
+
   for (const [line, result] of LINE_EQUAL_TEST_CASES) {
-    it.is(
-      new RobotsTxtLine('allow', line).isPathAllowedByLine(result),
-      true,
-      `${line} matches 1`,
-    );
-    it.is(
-      new RobotsTxtLine('allow', line).isPathAllowedByLine(line),
-      true,
-      `${line} matches 2`,
-    );
+    it.is(robotsTxt.isPathAllowed(line, 'Hello'), false, line);
+    it.is(robotsTxt.isPathAllowed(line, 'Not_an_agent'), true, line);
+    it.is(robotsTxt.isPathAllowed(line, 'Goodbye'), false, line);
+    it.is(robotsTxt.isPathAllowed(result, 'Hello'), false, result);
+    it.is(robotsTxt.isPathAllowed(result, 'Not_an_agent'), true, result);
+    it.is(robotsTxt.isPathAllowed(result, 'Goodbye'), false, result);
   }
-  for (const [robotsPath, attemptPath] of LINE_MATCH_TEST_CASES) {
-    it.is(
-      new RobotsTxtLine('allow', robotsPath).isPathAllowedByLine(attemptPath),
-      true,
-      `${robotsPath} -> ${attemptPath} matches`,
-    );
-  }
-  for (const [robotsPath, attemptPath] of LINE_MISMATCH_TEST_CASES) {
-    it.is(
-      typeof new RobotsTxtLine('allow', robotsPath).isPathAllowedByLine(
-        attemptPath,
-      ),
-      'undefined',
-      `${robotsPath} -> ${attemptPath} does not match`,
-    );
-  }
+
+  it.is(robotsTxt.isPathAllowed('/random', 'Hello'), false);
+  it.is(robotsTxt.isPathAllowed('/random', 'Not_an_agent'), false);
+  it.is(robotsTxt.isPathAllowed('/random', 'Goodbye'), false);
+
+  it.is(robotsTxt.isPathAllowed('/', 'Hello'), false);
+  it.is(robotsTxt.isPathAllowed('/', 'Not_an_agent'), false);
+  it.is(robotsTxt.isPathAllowed('/', 'Goodbye'), false);
+
+  it.is(new RobotsTxt('').isPathAllowed('/', 'Test_1'), true);
+  it.is(
+    new RobotsTxt(
+      'User-agent: Hi\nUser-Agent: *\nUser-Agent: Test_1\nDisallow:',
+    ).isPathAllowed('/', 'Test_1'),
+    true,
+  );
+
+  const robotsTxtAmz = new RobotsTxt(amazonRobots);
+
+  it.is(robotsTxtAmz.isPathAllowed('/b?node=9052533011', 'Test_1'), false);
+  it.is(
+    robotsTxtAmz.isPathAllowed('/b?hello&node=9052533011', 'Test_1'),
+    false,
+  );
 });

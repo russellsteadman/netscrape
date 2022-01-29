@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "packages/exclusion"
+		},
+		{
+			"path": "packages/bot"
+		}
+	],
+	"settings": {}
+}
