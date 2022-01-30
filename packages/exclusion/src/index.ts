@@ -44,7 +44,7 @@ export class RobotsTxtLine {
       // Normalize the path
       this.value = normalizePath(this.value);
       this.prematch = prematch(this.value, { isStrictEOL: this.strictEOL });
-      this.priority = Buffer.from(this.value).length;
+      this.priority = Buffer.byteLength(this.value);
     }
   }
 

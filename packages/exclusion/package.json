@@ -1,6 +1,6 @@
 {
   "name": "exclusion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A simple, RFC-compliant robots.txt parser",
   "author": "Russell Steadman",
   "license": "MIT",
@@ -18,7 +18,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/russellsteadman/netscrape.git"
+    "url": "https://github.com/russellsteadman/netscrape.git",
+    "directory": "packages/exclusion"
   },
   "keywords": [
     "robotstxt",

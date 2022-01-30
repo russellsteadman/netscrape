@@ -24,12 +24,12 @@ for most simple bot use-cases.
 ## Usage
 
 ```js
-const Exclusion = require('exclusion');
+const { RobotsTxt } = require('exclusion');
 
 // Fetch a robots.txt file...
 
 // Pass a robots.txt string to initialize the parser
-const robotsTxt = new Exclusion(myRobotsTxtString);
+const robotsTxt = new RobotsTxt(myRobotsTxtString);
 
 // Check a path
 robotsTxt.isPathAllowed('/certain/path', 'MyUserAgent');
