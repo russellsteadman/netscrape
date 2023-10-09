@@ -1,22 +1,22 @@
 {
   "name": "exclusion",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A simple, RFC-compliant robots.txt parser",
   "author": "Russell Steadman",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "dist",
+  "main": "./dist/cjs/index.js",
+  "types": "dist/cjs",
   "module": "./dist/index.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "require": "./dist/cjs/index.js"
     }
   },
   "scripts": {
-    "build": "tsc && swc ./src -d ./dist -D",
+    "build": "tsc && swc ./src -d ./dist -D && tsc -p tsconfig.cjs.json && swc ./src -d ./dist/cjs -D -C module.type=commonjs",
     "test": "c8 ava",
     "pretest": "swc ./src -d ./dist -D",
     "lint": "eslint",
@@ -61,7 +61,7 @@
     "typescript": "^5.2.2"
   },
   "engines": {
-    "node": ">=14.16"
+    "node": ">=18.18"
   },
   "sideEffects": false,
   "c8": {
@@ -103,7 +103,7 @@
     "rules": {},
     "overrides": [
       {
-        "files": "**/*.*test\\.ts",
+        "files": "**/*.*spec\\.ts",
         "plugins": [
           "@typescript-eslint",
           "ava"
