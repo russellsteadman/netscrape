@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/swcrc",
+  "jsc": {
+    "experimental": {
+      "keepImportAssertions": false
+    },
+    "parser": {
+      "syntax": "typescript",
+      "importAssertions": true
+    }
+  },
+  "sourceMaps": true,
+  "module": {
+    "type": "es6"
+  },
+  "env": {
+    "targets": "maintained node versions"
+  }
+}

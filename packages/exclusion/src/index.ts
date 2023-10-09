@@ -1,5 +1,5 @@
-import { match, prematch } from './match';
-import { normalizePath } from './normalize';
+import { match, prematch } from './match.js';
+import { normalizePath } from './normalize.js';
 
 // Based on RFC Draft: https://www.ietf.org/archive/id/draft-koster-rep-06.txt
 // With additional support for Crawl-Delay

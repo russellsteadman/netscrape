@@ -1,7 +1,11 @@
 import test from 'ava';
-import { RobotsTxt } from '../src/index';
-import amazonRobots from './assets/amazonRobots.json';
-import { LINE_EQUAL_TEST_CASES } from './assets/testCases.json';
+import { RobotsTxt } from '../index.js';
+import { loadJSON } from './_test.util.js';
+
+const { LINE_EQUAL_TEST_CASES } = loadJSON<Record<string, [string, string][]>>(
+  './assets/testCases.json',
+);
+const amazonRobots = loadJSON<string>('./assets/amazonRobots.json');
 
 const robotsTxtSourceOne = `User-Agent: Hello
 ${LINE_EQUAL_TEST_CASES.map(([line]) => `Disallow: ${line}`).join('\n')}
