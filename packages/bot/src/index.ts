@@ -2,7 +2,7 @@ import QuickLRU from 'quick-lru';
 import CacheableLookup from 'cacheable-lookup';
 import * as APIError from './errors.js';
 import { RobotsTxt } from 'exclusion';
-import got, { type Request, type Response } from 'got';
+import got, { Options, type Request, type Response } from 'got';
 
 type BotOptions = {
   name: string;
@@ -21,13 +21,13 @@ type BotRequestOptions = Partial<{
 
 class Bot {
   private robotsTxt = {} as Record<string, RobotsTxt>;
-  private robotsTxtString = {} as Record<string, string>;
+  private robotsTxtExpires = {} as Record<string, Date>;
   readonly userAgent!: string;
   readonly botName!: string;
   private requestDelay = {} as Record<string, number>;
   private requestTime = {} as Record<string, Date>;
-  private cache!: QuickLRU<unknown, unknown>;
-  private dnsCachable!: CacheableLookup;
+  cache!: QuickLRU<unknown, unknown>;
+  dnsCachable!: CacheableLookup;
   private options!: BotOptions;
 
   constructor(options: BotOptions) {
@@ -103,7 +103,7 @@ class Bot {
       }
     }
 
-    const defaultOptions = {
+    const defaultOptions: Partial<Options> = {
       timeout: {
         lookup: 6e4,
         socket: 6e4,
@@ -133,6 +133,7 @@ class Bot {
       cache: this.cache,
       cacheOptions: {
         shared: false,
+        immutableMinTimeToLive: 3600 * 1000,
       },
       dnsCache: this.dnsCachable,
     };
@@ -144,7 +145,7 @@ class Bot {
     return got.get(rawURL, {
       ...defaultOptions,
       responseType: 'text',
-    });
+    }) as Request | Response<string>;
   }
 
   private async fetchRobotsTxt(origin: string) {
@@ -153,10 +154,10 @@ class Bot {
     try {
       const robotsTxt = await this.fetchURL(robotsTxtURL);
 
-      if (this.robotsTxtString[origin] !== robotsTxt.body) {
-        this.robotsTxtString[origin] = robotsTxt.body;
-        this.robotsTxt[origin] = new RobotsTxt(robotsTxt.body);
-      }
+      this.robotsTxtExpires[origin] = new Date(
+        new Date().getTime() + 24 * 60 * 60 * 1000,
+      );
+      this.robotsTxt[origin] = new RobotsTxt(robotsTxt.body);
     } catch (err) {
       console.error(err);
     }
@@ -176,7 +177,7 @@ class Bot {
 
     await this.fetchRobotsTxt(url.origin);
 
-    const allowedByRobots = this.robotsTxt[origin].isPathAllowed(
+    const allowedByRobots = this.robotsTxt[url.origin].isPathAllowed(
       `${url.pathname}${url.search}`,
       this.botName,
     );
