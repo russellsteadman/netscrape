@@ -1,5 +1,5 @@
 import test from 'ava';
-import Bot from '../src/index';
+import Bot from '../index.js';
 
 test('Bot#constructor()', (it) => {
   const bot = new Bot({ name: 'Test', version: '0.1' });

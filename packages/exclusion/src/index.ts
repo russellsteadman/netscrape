@@ -1,7 +1,7 @@
-import { match, prematch } from './match';
-import { normalizePath } from './normalize';
+import { match, prematch } from './match.js';
+import { normalizePath } from './normalize.js';
 
-// Based on RFC Draft: https://www.ietf.org/archive/id/draft-koster-rep-06.txt
+// Based on RFC 9309: https://www.rfc-editor.org/rfc/rfc9309.html
 // With additional support for Crawl-Delay
 
 export type RobotsTxtKey = 'user-agent' | 'allow' | 'disallow' | 'crawl-delay';

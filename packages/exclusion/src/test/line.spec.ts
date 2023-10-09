@@ -1,10 +1,16 @@
 import test from 'ava';
-import { RobotsTxtLine } from '../src/index';
-import {
+import { RobotsTxtLine } from '../index.js';
+import { loadJSON } from './_test.util.js';
+
+const {
   LINE_EQUAL_TEST_CASES,
   LINE_MATCH_TEST_CASES,
   LINE_MISMATCH_TEST_CASES,
-} from './assets/testCases.json';
+} = loadJSON<{
+  LINE_EQUAL_TEST_CASES: [string, string][];
+  LINE_MATCH_TEST_CASES: [string, string][];
+  LINE_MISMATCH_TEST_CASES: [string, string][];
+}>('./assets/testCases.json');
 
 test('RobotsTxtLine#constructor()', (it) => {
   for (const [line, result] of LINE_EQUAL_TEST_CASES) {

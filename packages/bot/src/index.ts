@@ -1,9 +1,8 @@
-import type Request from 'got/dist/source/core';
-import type { Response } from 'got/dist/source/core/response';
 import QuickLRU from 'quick-lru';
 import CacheableLookup from 'cacheable-lookup';
-import * as APIError from './errors';
+import * as APIError from './errors.js';
 import { RobotsTxt } from 'exclusion';
+import got, { type Request, type Response } from 'got';
 
 type BotOptions = {
   name: string;
@@ -64,8 +63,8 @@ class Bot {
     this.userAgent =
       options.userAgent ??
       `${this.botName}/${options.version} (+${
-        options.policyURL ?? 'https://j.mp/engine-source'
-      }) ${options.hideLibraryAgent ? '' : 'NetScrape/0.1'}`;
+        options.policyURL ?? 'https://bit.ly/engine-source'
+      })${options.hideLibraryAgent ? '' : ' NetScrape/0.1'}`;
 
     this.cache = new QuickLRU({ maxSize: 50 });
     this.dnsCachable = new CacheableLookup({
@@ -94,7 +93,6 @@ class Bot {
     options?: BotRequestOptions,
   ): Promise<Request | Response<string>> {
     const url = new URL(rawURL);
-    const got = (await import('got')).default;
 
     const standardHeaders = { ...options?.headers };
 
@@ -126,7 +124,11 @@ class Bot {
         'sec-fetch-dest': 'document',
         'sec-fetch-mode': 'navigate',
         'sec-fetch-site': 'none',
+        'sec-ch-ua': '"NetScrape";v="1"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': 'Windows',
         'upgrade-insecure-requests': '1',
+        ...standardHeaders,
       },
       cache: this.cache,
       cacheOptions: {
