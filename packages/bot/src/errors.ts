@@ -1,23 +1,23 @@
-export class BadRequest extends Error implements Error {
-  status = 400;
+enum BotErrorType {
+  Request,
+  Delay,
+  RobotsTxt,
+  Configuration,
 }
 
-export class NotAuthorized extends Error implements Error {
-  status = 401;
+export class BotError extends Error implements Error {
+  status?: number;
+  type: BotErrorType = BotErrorType.Request;
 }
 
-export class NotFound extends Error implements Error {
-  status = 404;
+export class RobotsRejection extends BotError implements BotError {
+  type = BotErrorType.RobotsTxt;
 }
 
-export class Unprocessable extends Error implements Error {
-  status = 422;
+export class DelayError extends BotError implements BotError {
+  type = BotErrorType.Delay;
 }
 
-export class Internal extends Error implements Error {
-  status = 500;
-}
-
-export class BadGateway extends Error implements Error {
-  status = 502;
+export class ConfigError extends BotError implements BotError {
+  type = BotErrorType.Configuration;
 }
