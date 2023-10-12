@@ -1,6 +1,6 @@
 {
   "name": "netscrape",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A structural framework for creating good bots",
   "author": "Russell Steadman",
   "license": "MIT",
@@ -25,7 +25,7 @@
   "dependencies": {
     "@types/node": "^20.8.3",
     "cacheable-lookup": "^7.0.0",
-    "exclusion": "^0.1.1",
+    "exclusion": "^0.2.0",
     "got": "^13.0.0",
     "quick-lru": "^5.1.1"
   },
