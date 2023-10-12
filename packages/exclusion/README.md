@@ -1,6 +1,6 @@
 # Exclusion
 
-A simple and compliant `robots.txt` parser for Node.js.
+A simple and RFC 9309 compliant `robots.txt` parser for Node.js.
 
 ![](https://img.shields.io/librariesio/release/npm/exclusion?style=flat-square)
 ![](https://img.shields.io/npm/l/exclusion?style=flat-square) ![](https://img.shields.io/snyk/vulnerabilities/npm/exclusion?style=flat-square)
@@ -42,5 +42,5 @@ robotsTxt.getDelay('MyUserAgent');
 
 ## License
 
-MIT (C) 2022 [Russell Steadman](https://github.com/russellsteadman). See LICENSE file. Visit [Google
+MIT (C) 2023 [Russell Steadman](https://github.com/russellsteadman). See LICENSE file. Visit [Google
 deps.dev](https://deps.dev/npm/exclusion) for dependency license information.

@@ -1,13 +1,14 @@
 import QuickLRU from 'quick-lru';
 import CacheableLookup from 'cacheable-lookup';
-import * as APIError from './errors.js';
+import * as Errors from './errors.js';
 import { RobotsTxt } from 'exclusion';
-import got, { type Request, type Response } from 'got';
+import got, { Options, type Request, type Response } from 'got';
 
 type BotOptions = {
   name: string;
   version: string;
   minimumRequestDelay?: number;
+  maximumRequestDelay?: number;
   disableCaching?: boolean;
   policyURL?: string;
   hideLibraryAgent?: boolean;
@@ -17,59 +18,97 @@ type BotOptions = {
 type BotRequestOptions = Partial<{
   stream: boolean;
   headers: Record<string, string>;
+  overrides: Partial<Options>;
 }>;
 
 class Bot {
   private robotsTxt = {} as Record<string, RobotsTxt>;
-  private robotsTxtString = {} as Record<string, string>;
   readonly userAgent!: string;
   readonly botName!: string;
   private requestDelay = {} as Record<string, number>;
   private requestTime = {} as Record<string, Date>;
-  private cache!: QuickLRU<unknown, unknown>;
-  private dnsCachable!: CacheableLookup;
+  cache!: QuickLRU<unknown, unknown>;
+  dnsCachable!: CacheableLookup;
   private options!: BotOptions;
 
   constructor(options: BotOptions) {
+    // Validate the options
     if (!options || typeof options !== 'object') {
-      throw new Error('Missing or misformatted Bot options');
+      throw new Errors.ConfigError('Missing or misformatted Bot options');
     }
 
+    // Validate the bot name
     if (!options.name || typeof options.name !== 'string') {
-      throw new Error('Bot name must be a string');
+      throw new Errors.ConfigError('Bot name must be a string');
     } else if (!/^[a-zA-Z_-]+$/.test(options.name)) {
-      throw new Error('Bot name must only contain a-zA-Z_-');
+      throw new Errors.ConfigError('Bot name must only contain a-zA-Z_-');
     }
 
+    // Validate the bot version
     if (
       !options.version ||
       typeof options.version !== 'string' ||
       !/^\d+(\.\d+){0,2}$/.test(options.version)
     ) {
-      throw new Error('Version must be a string formatted as #, #.#, or #.#.#');
+      throw new Errors.ConfigError(
+        'Version must be a string formatted as #, #.#, or #.#.#',
+      );
     }
 
+    // Validate the policy URL
     try {
       if (options.policyURL) {
         new URL(options.policyURL);
       }
     } catch (err) {
-      throw new Error('Invalid policy URL');
+      throw new Errors.ConfigError('Invalid policy URL');
     }
 
+    // Ensure the minimum and maximum request delays are valid
+    if (
+      options.minimumRequestDelay &&
+      (typeof options.minimumRequestDelay !== 'number' ||
+        options.minimumRequestDelay < 0)
+    ) {
+      throw new Errors.ConfigError(
+        'Minimum request delay must be a positive number',
+      );
+    } else if (
+      options.maximumRequestDelay &&
+      (typeof options.maximumRequestDelay !== 'number' ||
+        options.maximumRequestDelay < 0)
+    ) {
+      throw new Errors.ConfigError(
+        'Maximum request delay must be a positive number',
+      );
+    } else if (
+      options.minimumRequestDelay &&
+      options.maximumRequestDelay &&
+      options.minimumRequestDelay > options.maximumRequestDelay
+    ) {
+      throw new Errors.ConfigError(
+        'Minimum request delay cannot be greater than maximum request delay',
+      );
+    }
+
+    // Set the options
     this.options = options;
 
+    // Set the bot name and user agent
     this.botName = options.name;
     this.userAgent =
       options.userAgent ??
       `${this.botName}/${options.version} (+${
-        options.policyURL ?? 'https://bit.ly/engine-source'
+        options.policyURL ?? 'https://npm.im/netscrape'
       })${options.hideLibraryAgent ? '' : ' NetScrape/0.1'}`;
 
+    // Initialize the request cache and DNS cache
     this.cache = new QuickLRU({ maxSize: 50 });
     this.dnsCachable = new CacheableLookup({
       cache: new QuickLRU({ maxSize: 1000 }),
     });
+
+    // Set the DNS servers
     this.dnsCachable.servers = [
       '1.1.1.1',
       '[2606:4700:4700::1111]',
@@ -92,10 +131,13 @@ class Bot {
     rawURL: string,
     options?: BotRequestOptions,
   ): Promise<Request | Response<string>> {
+    // Parse URL
     const url = new URL(rawURL);
 
+    // Initialize the headers
     const standardHeaders = { ...options?.headers };
 
+    // Convert all headers to lowercase
     for (const key of Object.keys(standardHeaders)) {
       if (key !== key.toLowerCase()) {
         standardHeaders[key.toLowerCase()] = standardHeaders[key];
@@ -103,7 +145,8 @@ class Bot {
       }
     }
 
-    const defaultOptions = {
+    // Initialize the default request options
+    const defaultOptions: Partial<Options> = {
       timeout: {
         lookup: 6e4,
         socket: 6e4,
@@ -118,7 +161,7 @@ class Bot {
         'user-agent': this.userAgent,
         accept: 'text/html;q=0.9,image/webp,*/*;q=0.8',
         'accept-language': 'en-US,en;q=0.5',
-        'cache-control': 'max-age=0',
+        'cache-control': 'max-age=86400',
         host: url.host,
         referer: url.origin,
         'sec-fetch-dest': 'document',
@@ -130,85 +173,121 @@ class Bot {
         'upgrade-insecure-requests': '1',
         ...standardHeaders,
       },
-      cache: this.cache,
+      cache: this.options.disableCaching ? false : this.cache,
       cacheOptions: {
         shared: false,
+        immutableMinTimeToLive: 3600 * 1000,
       },
-      dnsCache: this.dnsCachable,
+      maxRedirects: 5,
+      dnsCache: this.options.disableCaching ? false : this.dnsCachable,
+      ...options?.overrides,
     };
 
+    // Fetch the URL as a stream if requested
     if (options?.stream === true) {
       return got.stream(rawURL, { ...defaultOptions, isStream: true });
     }
 
+    // Fetch the URL as a string if requested
     return got.get(rawURL, {
       ...defaultOptions,
       responseType: 'text',
-    });
+    }) as Request | Response<string>;
   }
 
   private async fetchRobotsTxt(origin: string) {
-    const robotsTxtURL = `${origin}/robots.txt`;
+    // Fetch the robots.txt
+    const robotsTxt = await this.fetchURL(`${origin}/robots.txt`, {
+      overrides: { throwHttpErrors: false },
+    });
 
-    try {
-      const robotsTxt = await this.fetchURL(robotsTxtURL);
+    if (robotsTxt.statusCode >= 400 && robotsTxt.statusCode < 500) {
+      // RFC 9309 2.3.1.3, allow all for 400 errors
+      this.robotsTxt[origin] = new RobotsTxt('User-agent: *\nDisallow:');
 
-      if (this.robotsTxtString[origin] !== robotsTxt.body) {
-        this.robotsTxtString[origin] = robotsTxt.body;
-        this.robotsTxt[origin] = new RobotsTxt(robotsTxt.body);
-      }
-    } catch (err) {
-      console.error(err);
+      // 400 Errors are not cached
+      return;
+    } else if (robotsTxt.statusCode >= 500) {
+      // RFC 9309 2.3.1.4, must reject 500 errors
+      throw new Errors.RobotsRejection('Robots.txt server error');
+    }
+
+    if (Buffer.byteLength(robotsTxt.body) > 5e5) {
+      // RFC 9309 2.5: Can reject robots.txt files larger than 500KB
+      throw new Errors.MemoryError('Robots.txt too large');
+    }
+
+    // Parse the robots.txt
+    this.robotsTxt[origin] = new RobotsTxt(robotsTxt.body);
+
+    // Wait for the required delay if not cached
+    if (!robotsTxt.isFromCache) {
+      await this.waitForRequestDelay(origin);
     }
   }
 
   private getDelay(origin: string) {
+    // Establish a minimum request delay (default 1 second)
     const minimumRequestDelay = this.options.minimumRequestDelay ?? 1000;
-    return (this.requestDelay[origin] ?? 0) > minimumRequestDelay
-      ? this.requestDelay[origin]
-      : minimumRequestDelay;
+
+    // Calculate the delay for the origin based on the robots.txt
+    return Math.max(this.requestDelay[origin] ?? 0, minimumRequestDelay);
+  }
+
+  private async waitForRequestDelay(origin: string) {
+    // Get the delay for the origin
+    const delay = this.getDelay(origin);
+
+    // Calculate the wait time for the origin
+    const waitTime =
+      delay - (Date.now() - (this.requestTime[origin]?.getTime() ?? 0));
+
+    // Wait for the required delay
+    if (this.requestTime[origin] && waitTime > 0) {
+      // Check if the wait time is too long
+      if (waitTime <= (this.options.maximumRequestDelay ?? 10000)) {
+        await new Promise((res) => {
+          setTimeout(res, waitTime);
+        });
+      } else {
+        throw new Errors.DelayError('Wait time too long');
+      }
+    }
+
+    // Set the request time for the next delay
+    this.requestTime[origin] = new Date();
   }
 
   makeRequest(rawURL: string, asStream?: false): Promise<Response<string>>;
   makeRequest(rawURL: string, asStream: true): Promise<Request>;
   async makeRequest(rawURL: string, asStream = false) {
+    // Parse URL
     const url = new URL(rawURL);
 
+    // Get the robots.txt for the origin
     await this.fetchRobotsTxt(url.origin);
 
-    const allowedByRobots = this.robotsTxt[origin].isPathAllowed(
+    // Check if the path is allowed
+    const allowedByRobots = this.robotsTxt[url.origin].isPathAllowed(
       `${url.pathname}${url.search}`,
       this.botName,
     );
 
+    // If not allowed, throw a rejection
     if (!allowedByRobots) {
-      throw new APIError.BadGateway('Request blocked by robots.txt');
+      throw new Errors.RobotsRejection('Request blocked by robots.txt');
     }
 
-    const delay = this.getDelay(url.origin);
-    const waitTime =
-      delay - (Date.now() - (this.requestTime[url.origin]?.getTime() ?? 0));
+    // Wait for the required delay
+    await this.waitForRequestDelay(url.origin);
 
-    if (this.requestTime[url.origin] && waitTime > 0) {
-      if (waitTime <= 10000) {
-        await new Promise((res) => {
-          setTimeout(res, waitTime);
-        });
-      } else {
-        console.error('Wait time rejected');
-        throw new APIError.BadGateway('Wait time too long');
-      }
-    }
-
-    this.requestTime[url.origin] = new Date();
-
+    // Fetch the URL as a stream if requested
     if (asStream) {
       return this.fetchURL(rawURL, { stream: true });
     }
 
-    const content = await this.fetchURL(rawURL);
-
-    return content;
+    // Fetch the URL as a string if requested
+    return this.fetchURL(rawURL);
   }
 }
 

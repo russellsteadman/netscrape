@@ -1,0 +1,3 @@
+User-Agent: foobot
+Disallow: /example/page/
+Allow: /example/page/

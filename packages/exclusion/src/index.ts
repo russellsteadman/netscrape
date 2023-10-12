@@ -60,6 +60,7 @@ export class RobotsTxtLine {
   }
 
   // Check if a user-agent rule applies
+  // RFC 9309 2.2.1: Case insensitive, * matches all
   isOwnUserAgent(self: string) {
     if (this.key !== 'user-agent') return AgentSpecificity.NotSpecified;
     if (
@@ -132,9 +133,25 @@ export class RobotsTxt {
   //  order they occur in the record. The first match found is used. If no match
   //  is found, the default assumption is that the URL is allowed.
   isPathAllowed(path: string, userAgent: string) {
+    if (path === '/robots.txt') return true;
+
+    let robotsSpecificity: AgentSpecificity = AgentSpecificity.NotSpecified;
+
+    // Step 1: Find the most specific user-agent rule or rules
+    for (const line of this.lines) {
+      robotsSpecificity = Math.max(
+        robotsSpecificity,
+        line.isOwnUserAgent(userAgent),
+      );
+    }
+
+    if (robotsSpecificity === AgentSpecificity.NotSpecified) return true;
+
+    // Step 2: Find the most specific rule for the user-agent
+
     let ownUserAgent: AgentSpecificity = AgentSpecificity.NotSpecified;
 
-    const status = new Map<AgentSpecificity, Map<number, boolean>>();
+    const status = new Map<number, boolean>();
 
     for (const line of this.lines) {
       if (line.key === 'user-agent') {
@@ -147,24 +164,19 @@ export class RobotsTxt {
         (line.key === 'allow' || line.key === 'disallow') &&
         ownUserAgent
       ) {
+        if (ownUserAgent < robotsSpecificity) continue;
+
         const lineStatus = line.isPathAllowedByLine(path);
         if (
           typeof lineStatus === 'boolean' &&
           typeof line.priority === 'number'
         ) {
-          const lineResult =
-            status.get(ownUserAgent) ?? new Map<number, boolean>();
-          if (!lineResult.has(line.priority))
-            lineResult.set(line.priority, lineStatus);
-          status.set(ownUserAgent, lineResult);
+          status.set(line.priority, lineStatus || !!status.get(line.priority));
         }
       }
     }
 
-    const maxStatus =
-      status.get(Math.max(...status.keys())) ?? new Map<number, boolean>();
-
-    return maxStatus.get(Math.max(...maxStatus.keys())) ?? true;
+    return status.get(Math.max(...status.keys())) ?? true;
   }
 
   getDelay(userAgent: string) {

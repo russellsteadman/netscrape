@@ -1,11 +1,12 @@
 import test from 'ava';
 import { RobotsTxt } from '../index.js';
-import { loadJSON } from './_test.util.js';
+import { loadJSON, loadText } from './_test.util.js';
+import fs from 'fs';
 
 const { LINE_EQUAL_TEST_CASES } = loadJSON<Record<string, [string, string][]>>(
   './assets/testCases.json',
 );
-const amazonRobots = loadJSON<string>('./assets/amazonRobots.json');
+const amazonRobots = loadText('./assets/amazonRobots.txt');
 
 const robotsTxtSourceOne = `User-Agent: Hello
 ${LINE_EQUAL_TEST_CASES.map(([line]) => `Disallow: ${line}`).join('\n')}
@@ -53,11 +54,11 @@ test('RobotsTxt#isPathAllowed()', (it) => {
     it.is(robotsTxt.isPathAllowed(result, 'Goodbye'), false, result);
   }
 
-  it.is(robotsTxt.isPathAllowed('/random', 'Hello'), false);
+  it.is(robotsTxt.isPathAllowed('/random', 'Hello'), true);
   it.is(robotsTxt.isPathAllowed('/random', 'Not_an_agent'), false);
   it.is(robotsTxt.isPathAllowed('/random', 'Goodbye'), false);
 
-  it.is(robotsTxt.isPathAllowed('/', 'Hello'), false);
+  it.is(robotsTxt.isPathAllowed('/', 'Hello'), true);
   it.is(robotsTxt.isPathAllowed('/', 'Not_an_agent'), false);
   it.is(robotsTxt.isPathAllowed('/', 'Goodbye'), false);
 
