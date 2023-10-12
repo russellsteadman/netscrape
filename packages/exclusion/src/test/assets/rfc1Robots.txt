@@ -1,0 +1,19 @@
+# robots.txt for http://www.example.com/
+User-Agent: *
+Disallow: *.gif$
+Disallow: /example/
+Allow: /publications/
+
+# Foobot is only allowed on specific pages
+User-Agent: foobot
+Disallow:/
+Allow:/example/page.html
+Allow:/example/allowed.gif
+
+# Both barbot and bazbot apply
+User-Agent: barbot
+User-Agent: bazbot
+Disallow: /example/page.html
+
+# Unrestricted
+User-Agent: quxbot
