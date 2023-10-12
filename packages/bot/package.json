@@ -1,6 +1,6 @@
 {
   "name": "netscrape",
-  "version": "0.1.0-alpha1",
+  "version": "0.1.0",
   "description": "A structural framework for creating good bots",
   "author": "Russell Steadman",
   "license": "MIT",

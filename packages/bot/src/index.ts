@@ -4,7 +4,7 @@ import * as Errors from './errors.js';
 import { RobotsTxt } from 'exclusion';
 import got, { Options, type Request, type Response } from 'got';
 
-type BotOptions = {
+export type BotOptions = {
   name: string;
   version: string;
   minimumRequestDelay?: number;
@@ -27,8 +27,8 @@ class Bot {
   readonly botName!: string;
   private requestDelay = {} as Record<string, number>;
   private requestTime = {} as Record<string, Date>;
-  cache!: QuickLRU<unknown, unknown>;
-  dnsCachable!: CacheableLookup;
+  private cache!: QuickLRU<unknown, unknown>;
+  private dnsCachable!: CacheableLookup;
   private options!: BotOptions;
 
   constructor(options: BotOptions) {
@@ -291,4 +291,5 @@ class Bot {
   }
 }
 
+export * from './errors.js';
 export default Bot;

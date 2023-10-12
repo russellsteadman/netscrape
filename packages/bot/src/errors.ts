@@ -1,4 +1,4 @@
-enum BotErrorType {
+export enum BotErrorType {
   Request,
   Delay,
   RobotsTxt,
