@@ -178,6 +178,7 @@ class Bot {
         shared: false,
         immutableMinTimeToLive: 3600 * 1000,
       },
+      maxRedirects: 5,
       dnsCache: this.options.disableCaching ? false : this.dnsCachable,
       ...options?.overrides,
     };
@@ -209,6 +210,11 @@ class Bot {
     } else if (robotsTxt.statusCode >= 500) {
       // RFC 9309 2.3.1.4, must reject 500 errors
       throw new Errors.RobotsRejection('Robots.txt server error');
+    }
+
+    if (Buffer.byteLength(robotsTxt.body) > 5e5) {
+      // RFC 9309 2.5: Can reject robots.txt files larger than 500KB
+      throw new Errors.MemoryError('Robots.txt too large');
     }
 
     // Parse the robots.txt

@@ -1,10 +1,7 @@
 import test from 'ava';
 import Bot from '../index.js';
 import * as Errors from '../errors.js';
-import { type Server } from 'http';
 import { startServer, stopServer } from './_server.util.js';
-
-let server: Server | undefined;
 
 test('Bot#constructor()', (it) => {
   const bot = new Bot({ name: 'Test', version: '0.1' });
@@ -13,7 +10,7 @@ test('Bot#constructor()', (it) => {
 
 test('Bot disallow none', async (it) => {
   const start = await startServer('User-agent: *\nDisallow:');
-  server = start.server;
+  it.teardown(async () => await stopServer(start.server));
 
   const bot = new Bot({ name: 'Test', version: '0.1' });
 
@@ -51,7 +48,7 @@ test('Bot disallow none', async (it) => {
 
 test('Bot allow all', async (it) => {
   const start = await startServer('User-agent: *\nAllow: /');
-  server = start.server;
+  it.teardown(async () => await stopServer(start.server));
 
   const bot = new Bot({ name: 'Test', version: '0.1' });
 
@@ -70,7 +67,7 @@ test('Bot allow all', async (it) => {
 
 test('Bot disallow all', async (it) => {
   const start = await startServer('User-agent: *\nDisallow: /');
-  server = start.server;
+  it.teardown(async () => await stopServer(start.server));
 
   const bot = new Bot({ name: 'Test', version: '0.1' });
 
@@ -107,11 +104,11 @@ test('Bot disallow all', async (it) => {
   );
 });
 
-test('Bot responds to 400 errors', async (it) => {
+test('RFC 9309 2.3.1.3: Responds to 400 errors', async (it) => {
   const start = await startServer('User-agent: *\nAllow: /', {
     robots400: true,
   });
-  server = start.server;
+  it.teardown(async () => await stopServer(start.server));
 
   const bot = new Bot({ name: 'Test', version: '0.1' });
 
@@ -128,11 +125,11 @@ test('Bot responds to 400 errors', async (it) => {
   it.is(req.body, 'C');
 });
 
-test('Bot responds to 500 errors', async (it) => {
+test('RFC 9309 2.3.1.4: Responds to 500 errors', async (it) => {
   const start = await startServer('User-agent: *\nAllow: /', {
     robots500: true,
   });
-  server = start.server;
+  it.teardown(async () => await stopServer(start.server));
 
   const bot = new Bot({ name: 'Test', version: '0.1' });
 
@@ -140,7 +137,7 @@ test('Bot responds to 500 errors', async (it) => {
     () => bot.makeRequest(`http://127.0.0.1:${start.port}/`),
     {
       instanceOf: Errors.RobotsRejection,
-      message: 'Request blocked by robots.txt',
+      message: 'Robots.txt server error',
     },
   );
 
@@ -148,7 +145,7 @@ test('Bot responds to 500 errors', async (it) => {
     () => bot.makeRequest(`http://127.0.0.1:${start.port}/a`),
     {
       instanceOf: Errors.RobotsRejection,
-      message: 'Request blocked by robots.txt',
+      message: 'Robots.txt server error',
     },
   );
 
@@ -156,7 +153,7 @@ test('Bot responds to 500 errors', async (it) => {
     () => bot.makeRequest(`http://127.0.0.1:${start.port}/a/b`),
     {
       instanceOf: Errors.RobotsRejection,
-      message: 'Request blocked by robots.txt',
+      message: 'Robots.txt server error',
     },
   );
 
@@ -164,13 +161,7 @@ test('Bot responds to 500 errors', async (it) => {
     () => bot.makeRequest(`http://127.0.0.1:${start.port}/a/b/c`),
     {
       instanceOf: Errors.RobotsRejection,
-      message: 'Request blocked by robots.txt',
+      message: 'Robots.txt server error',
     },
   );
-});
-
-test.afterEach(async () => {
-  if (server) {
-    await stopServer(server);
-  }
 });

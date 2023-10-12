@@ -51,6 +51,8 @@ export async function startServer(
     });
   });
 
+  server.setMaxListeners(0);
+
   return { server, requests, port };
 }
 
