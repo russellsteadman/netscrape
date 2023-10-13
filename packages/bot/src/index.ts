@@ -3,6 +3,7 @@ import CacheableLookup from 'cacheable-lookup';
 import * as Errors from './errors.js';
 import { RobotsTxt } from 'exclusion';
 import got, { Options, type Request, type Response } from 'got';
+import { normalizeHeaders } from './utilities.js';
 
 export type BotOptions = {
   name: string;
@@ -119,13 +120,13 @@ class Bot {
     ];
   }
 
-  private fetchURL(
+  private fetchURL<T extends unknown>(
     rawURL: string,
     options?: BotRequestOptions & { stream?: false },
-  ): Promise<Response<string>>;
+  ): Promise<Response<T>>;
   private fetchURL(
     rawURL: string,
-    asStream: BotRequestOptions & { stream: true },
+    options: BotRequestOptions & { stream: true },
   ): Promise<Request>;
   private async fetchURL(
     rawURL: string,
@@ -135,18 +136,11 @@ class Bot {
     const url = new URL(rawURL);
 
     // Initialize the headers
-    const standardHeaders = { ...options?.headers };
-
-    // Convert all headers to lowercase
-    for (const key of Object.keys(standardHeaders)) {
-      if (key !== key.toLowerCase()) {
-        standardHeaders[key.toLowerCase()] = standardHeaders[key];
-        delete standardHeaders[key];
-      }
-    }
+    const standardHeaders = normalizeHeaders(options?.headers ?? {});
 
     // Initialize the default request options
     const defaultOptions: Partial<Options> = {
+      method: 'GET',
       timeout: {
         lookup: 6e4,
         socket: 6e4,
@@ -189,7 +183,7 @@ class Bot {
     }
 
     // Fetch the URL as a string if requested
-    return got.get(rawURL, {
+    return got(rawURL, {
       ...defaultOptions,
       responseType: 'text',
     }) as Request | Response<string>;
@@ -197,7 +191,7 @@ class Bot {
 
   private async fetchRobotsTxt(origin: string) {
     // Fetch the robots.txt
-    const robotsTxt = await this.fetchURL(`${origin}/robots.txt`, {
+    const robotsTxt = await this.fetchURL<string>(`${origin}/robots.txt`, {
       overrides: { throwHttpErrors: false },
     });
 
@@ -287,7 +281,56 @@ class Bot {
     }
 
     // Fetch the URL as a string if requested
-    return this.fetchURL(rawURL);
+    return this.fetchURL<string>(rawURL);
+  }
+
+  async makeRequestWithBody<T extends unknown>(
+    rawURL: string,
+    body: string | Record<string, any>,
+    headers?: Record<string, string>,
+    method: 'POST' | 'PUT' | 'DELETE' = 'POST',
+  ): Promise<Response<T>> {
+    // Parse URL
+    const url = new URL(rawURL);
+
+    // Get the robots.txt for the origin
+    await this.fetchRobotsTxt(url.origin);
+
+    // Check if the path is allowed
+    const allowedByRobots = this.robotsTxt[url.origin].isPathAllowed(
+      `${url.pathname}${url.search}`,
+      this.botName,
+    );
+
+    // If not allowed, throw a rejection
+    if (!allowedByRobots) {
+      throw new Errors.RobotsRejection('Request blocked by robots.txt');
+    }
+
+    // Wait for the required delay
+    await this.waitForRequestDelay(url.origin);
+
+    // Format the body as a string
+    const formattedBody =
+      typeof body === 'string' ? body : JSON.stringify(body);
+
+    // Fetch the URL as a string if requested
+    return this.fetchURL<T>(rawURL, {
+      headers: {
+        // Set the content type and length
+        'content-type':
+          typeof body !== 'string' ? 'application/json' : 'text/plain',
+        'content-length': Buffer.byteLength(formattedBody).toString(),
+
+        // Set the rest of the headers
+        // content-type can be overridden
+        ...normalizeHeaders(headers ?? {}),
+      },
+      overrides: {
+        method,
+        body: formattedBody,
+      },
+    });
   }
 }
 

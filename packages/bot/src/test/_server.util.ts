@@ -14,17 +14,33 @@ export function createServer(
     requests.push(req);
     res.send('Home');
   });
+  app.post('/', (req, res) => {
+    requests.push(req);
+    res.send('Home POST');
+  });
   app.get('/a', (req, res) => {
     requests.push(req);
     res.send('A');
+  });
+  app.post('/a', (req, res) => {
+    requests.push(req);
+    res.send('A POST');
   });
   app.get('/a/b', (req, res) => {
     requests.push(req);
     res.send('B');
   });
+  app.post('/a/b', (req, res) => {
+    requests.push(req);
+    res.send('B POST');
+  });
   app.get('/a/b/c', (req, res) => {
     requests.push(req);
     res.send('C');
+  });
+  app.post('/a/b/c', (req, res) => {
+    requests.push(req);
+    res.send('C POST');
   });
   app.get('/robots.txt', (req, res) => {
     requests.push(req);

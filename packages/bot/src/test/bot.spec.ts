@@ -165,3 +165,69 @@ test('RFC 9309 2.3.1.4: Responds to 500 errors', async (it) => {
     },
   );
 });
+
+test('Bot#makeRequestWithBody()', async (it) => {
+  const bot = new Bot({ name: 'Test', version: '0.1' });
+  const start = await startServer('User-agent: *\nAllow: /');
+  it.teardown(async () => await stopServer(start.server));
+
+  it.is(typeof bot.makeRequestWithBody, 'function');
+
+  let res = await bot.makeRequestWithBody(
+    `http://127.0.0.1:${start.port}/`,
+    'Hello, world!',
+  );
+  it.is(res.body, 'Home POST');
+
+  res = await bot.makeRequestWithBody(
+    `http://127.0.0.1:${start.port}/a`,
+    'Hello, world!',
+  );
+
+  it.is(res.body, 'A POST');
+
+  res = await bot.makeRequestWithBody(
+    `http://127.0.0.1:${start.port}/a/b`,
+    'Hello, world!',
+  );
+
+  it.is(res.body, 'B POST');
+
+  res = await bot.makeRequestWithBody(
+    `http://127.0.0.1:${start.port}/a/b/c`,
+    'Hello, world!',
+  );
+
+  it.is(res.body, 'C POST');
+
+  let req = start.requests[1];
+  it.is(req.method, 'POST');
+  it.is(req.headers['content-type'], 'text/plain');
+  it.is(req.headers['content-length'], '13');
+
+  res = await bot.makeRequestWithBody(
+    `http://127.0.0.1:${start.port}/`,
+    '<p></p>',
+    { 'Content-Type': 'text/html' },
+  );
+
+  req = start.requests[5];
+
+  it.is(res.body, 'Home POST');
+
+  it.is(req.method, 'POST');
+  it.is(req.headers['content-type'], 'text/html');
+  it.is(req.headers['content-length'], '7');
+
+  res = await bot.makeRequestWithBody(`http://127.0.0.1:${start.port}/`, {
+    hello: 'world',
+  });
+
+  req = start.requests[6];
+
+  it.is(res.body, 'Home POST');
+
+  it.is(req.method, 'POST');
+  it.is(req.headers['content-type'], 'application/json');
+  it.is(req.headers['content-length'], '17');
+});
