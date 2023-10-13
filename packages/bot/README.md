@@ -79,6 +79,37 @@ try {
 }
 ```
 
+### Bot#makeRequestWithBody
+
+```ts
+import Bot from 'netscrape';
+
+const exampleBot = new Bot({ name: 'ExampleBot', version: '1.0' });
+
+try {
+  /* Note: Bot#makeRequestWithBody automatically requests /robots.txt in the background */
+  /* Note: Bot#makeRequestWithBody automatically sets the
+    Content-Type header to application/json or text/plain based on the body type */
+
+  const response = await exampleBot.makeRequestWithBody(
+    'https://www.example.com/path' /* required, well-formatted URL to make request to */,
+    {
+      example: 'body',
+    } /* required, body to send to server (string or object) */,
+    {
+      'x-example-header': 'example header',
+    } /* optional, headers to send to server */,
+    'POST' /* optional, HTTP method to use (default POST) */,
+  );
+
+  /* Bot#makeRequestWithBody returns the raw npm.im/got package request response */
+  console.log(response.body);
+} catch (error) {
+  /* Robots.txt rejection, robots.txt 500 error, etc. */
+  console.error(error);
+}
+```
+
 ## License
 
 MIT (C) 2023 [Russell Steadman](https://github.com/russellsteadman). See LICENSE file. Visit [Google
